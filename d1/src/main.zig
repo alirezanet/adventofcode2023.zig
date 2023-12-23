@@ -1,6 +1,5 @@
 const std = @import("std");
 const print = std.debug.print;
-const assert = std.debug.assert;
 const isDigit = std.ascii.isDigit;
 
 pub fn main() !void {
@@ -18,8 +17,8 @@ pub fn main() !void {
 
     var total: u32 = 0;
     while (try stream.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024)) |line_untr| {
-        const line = std.mem.trim(u8, line_untr, "\r");
-        const str = try getNormalizedLine(line, allocator);
+        const str = std.mem.trim(u8, getNormalizedLine(line_untr), "\r");
+
         var len: usize = str.len;
         var numberStr: [2]u8 = undefined;
 
@@ -40,43 +39,38 @@ pub fn main() !void {
         }
 
         const number = std.fmt.parseInt(u32, numberStr[0..], 10) catch {
-            print("Invalid Input!: {s}\n", .{line});
+            print("Invalid Input!: {s}\n", .{line_untr});
             return;
         };
 
-        // print("{d} {s}\n", .{ number, str });
-        // assert(number > 0);
         total += number;
     }
 
     print("total is: {d}\n", .{total});
 }
 
-fn getNormalizedLine(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
-    var result = std.ArrayList(u8).init(allocator);
+fn getNormalizedLine(input: []u8) []u8 {
     var i: usize = 0;
     while (i < input.len) : (i += 1) {
         if ((i + 3) <= input.len and std.mem.eql(u8, "one", input[i .. i + 3])) {
-            try result.append('1');
+            input[i] = '1';
         } else if ((i + 3) <= input.len and std.mem.eql(u8, "two", input[i .. i + 3])) {
-            try result.append('2');
+            input[i] = '2';
         } else if ((i + 5) <= input.len and std.mem.eql(u8, "three", input[i .. i + 5])) {
-            try result.append('3');
+            input[i] = '3';
         } else if ((i + 4) <= input.len and std.mem.eql(u8, "four", input[i .. i + 4])) {
-            try result.append('4');
+            input[i] = '4';
         } else if ((i + 4) <= input.len and std.mem.eql(u8, "five", input[i .. i + 4])) {
-            try result.append('5');
+            input[i] = '5';
         } else if ((i + 3) <= input.len and std.mem.eql(u8, "six", input[i .. i + 3])) {
-            try result.append('6');
+            input[i] = '6';
         } else if ((i + 5) <= input.len and std.mem.eql(u8, "seven", input[i .. i + 5])) {
-            try result.append('7');
+            input[i] = '7';
         } else if ((i + 5) <= input.len and std.mem.eql(u8, "eight", input[i .. i + 5])) {
-            try result.append('8');
+            input[i] = '8';
         } else if ((i + 4) <= input.len and std.mem.eql(u8, "nine", input[i .. i + 4])) {
-            try result.append('9');
-        } else {
-            try result.append(input[i]);
+            input[i] = '9';
         }
     }
-    return result.items;
+    return input;
 }
