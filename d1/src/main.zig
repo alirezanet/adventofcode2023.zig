@@ -17,7 +17,6 @@ pub fn main() !void {
     var stream = buf_reader.reader();
 
     var total: u32 = 0;
-    var counter: u32 = 0;
     while (try stream.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024)) |line_untr| {
         const line = std.mem.trim(u8, line_untr, "\r");
         const str = try getNormalizedLine(line, allocator);
@@ -45,13 +44,12 @@ pub fn main() !void {
             return;
         };
 
-        print("{d} {s}\n", .{ number, str });
-        assert(number > 0);
+        // print("{d} {s}\n", .{ number, str });
+        // assert(number > 0);
         total += number;
-        counter += 1;
     }
 
-    print("total for {d} items is: {d} \n", .{ counter, total });
+    print("total is: {d}\n", .{total});
 }
 
 fn getNormalizedLine(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
