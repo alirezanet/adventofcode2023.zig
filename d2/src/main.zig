@@ -3,9 +3,6 @@ const parser = @import("parser.zig");
 const print = std.debug.print;
 
 const FileName = "input.txt";
-const MaxRed = 12;
-const MaxGreen = 13;
-const MaxBlue = 14;
 
 pub fn main() !void {
     // create global allocator
@@ -16,9 +13,39 @@ pub fn main() !void {
     const games: []parser.Game = try parser.parseGames(FileName, allocator);
     defer allocator.free(games);
 
+    // part1(games);
+    part2(games);
+}
+
+fn part2(games: []parser.Game) void {
     var total: u32 = 0;
     for (games) |game| {
-        const isPossible = isGameItPossible(game);
+        var red: u32 = 0;
+        var green: u32 = 0;
+        var blue: u32 = 0;
+        for (game.cubeset) |set| {
+            for (set.cubes) |cube| {
+                if (cube.cubeType == .red and cube.count > red) {
+                    red = cube.count;
+                } else if (cube.cubeType == .green and cube.count > green) {
+                    green = cube.count;
+                } else if (cube.cubeType == .blue and cube.count > blue) {
+                    blue = cube.count;
+                }
+            }
+        }
+
+        total += red * green * blue;
+        // print("power game {d}: {d}\n", .{ game.number, red * green * blue });
+    }
+
+    print("total is: {d}\n", .{total});
+}
+
+fn part1(games: []parser.Game) !void {
+    var total: u32 = 0;
+    for (games) |game| {
+        const isPossible = isPossibleGame(game);
         print("game {d}: {}\n", .{ game.number, isPossible });
         if (isPossible) {
             total += game.number;
@@ -28,7 +55,10 @@ pub fn main() !void {
     print("total is {d}\n", .{total});
 }
 
-fn isGameItPossible(game: parser.Game) bool {
+fn isPossibleGame(game: parser.Game) bool {
+    const MaxRed = 12;
+    const MaxGreen = 13;
+    const MaxBlue = 14;
     for (game.cubeset) |set| {
         for (set.cubes) |cube| {
             const isPossible = switch (cube.cubeType) {
