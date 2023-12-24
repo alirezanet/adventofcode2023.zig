@@ -50,22 +50,64 @@ pub fn main() !void {
         }
     }
 
+    // try part1(list);
+    try part2(list);
+}
+
+fn part2(list: std.ArrayList(EnginePart)) !void {
+    var total: u32 = 0;
+
+    itemLoop: for (list.items) |item| {
+        var ratio: u32 = 0;
+        var neighbourCounter: u8 = 0;
+        if (item.partType == PartType.symbol and '*' == item.value[0]) {
+            for (list.items) |neighbour| {
+                neighbourPosition: for (neighbour.startPos..neighbour.endPos) |neighbourPos| {
+                    const pos: i32 = @intCast(item.startPos);
+                    const npos: i32 = @intCast(neighbourPos);
+                    const lpos: i32 = @intCast(item.lineNumber);
+                    const nlpos: i32 = @intCast(neighbour.lineNumber);
+
+                    if (neighbour.partType == PartType.number and
+                        (@abs(npos - pos)) <= 1 and
+                        (@abs(nlpos - lpos) <= 1))
+                    {
+                        neighbourCounter += 1;
+                        if (neighbourCounter <= 2) {
+                            const val = try std.fmt.parseInt(u32, neighbour.value, 10);
+                            if (ratio == 0) ratio = val else ratio *= val;
+                            if (neighbourCounter == 2) {
+                                total += ratio;
+                                continue :itemLoop;
+                            }
+                        }
+                        break :neighbourPosition; // we already found this neighbour
+                    }
+                }
+            }
+        }
+    }
+
+    print("total is: {}\n", .{total});
+}
+
+fn part1(list: std.ArrayList(EnginePart)) !void {
     var total: u32 = 0;
     for (list.items) |item| {
         if (item.partType == PartType.number) {
             // check if it has any symbol around
             var hasAdjacentSymbol = false;
             pos: for (item.startPos..item.endPos) |position| {
-                for (list.items) |neighbor| {
+                for (list.items) |neighbour| {
                     const pos: i32 = @intCast(position);
-                    const npos: i32 = @intCast(neighbor.startPos);
+                    const npos: i32 = @intCast(neighbour.startPos);
                     const lpos: i32 = @intCast(item.lineNumber);
-                    const nlpos: i32 = @intCast(neighbor.lineNumber);
-                    if (neighbor.partType == PartType.symbol and
+                    const nlpos: i32 = @intCast(neighbour.lineNumber);
+                    if (neighbour.partType == PartType.symbol and
                         (@abs(npos - pos)) <= 1 and
                         (@abs(nlpos - lpos) <= 1))
                     {
-                        print("{s} = {s}\n", .{ item.value, neighbor.value });
+                        print("{s} = {s}\n", .{ item.value, neighbour.value });
                         hasAdjacentSymbol = true;
                         break :pos;
                     }
