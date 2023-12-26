@@ -19,33 +19,33 @@ pub fn main() !void {
     print("total is: {d}\n", .{total});
 }
 
-fn part2(buf: []u8, allocator: *std.mem.Allocator) u32 {
+fn part2(buf: []u8) u32 {
     var it_lines = std.mem.splitSequence(u8, buf, "\n");
-    var total: u32 = 0;
-    //  getTotalWinningCards(&it_lines);
-    var cache = std.AutoHashMap(u32, u32).init(allocator);
-
-    while (it_lines.next()) |line| {
-        total += 1;
-        const cardId = getCardId(line);
-        const cardVal = getTotalWinningCards(null);
-        cache.put(cardId, cardVal) catch unreachable;
-    }
+    var total = getTotalWinningCards(&it_lines, 0, true);
     it_lines.reset(); // count existing cards
+    while (it_lines.next()) |_| total += 1;
     return total;
 }
+var inlineTotal: u32 = 0;
 
-fn getTotalWinningCards(it: *std.mem.SplitIterator(u8, std.mem.DelimiterType.sequence)) u32 {
+fn getTotalWinningCards(it: *std.mem.SplitIterator(u8, std.mem.DelimiterType.sequence), nestingLvl: u32, logging: bool) u32 {
     var total: u32 = 0;
     while (it.next()) |line| {
+        if (logging) print("{s} {d}\n", .{ line, inlineTotal });
+
         const index = it.index;
         defer it.index = index; // reset the iterator
 
         var x = FindMatchCards(line);
 
         total += x;
-        while (x > 1) : (x -= 1)
-            total += getTotalWinningCards(it);
+        while (x > 1) : (x -= 1) {
+            total += getTotalWinningCards(it, nestingLvl + 1, false);
+            if (total > inlineTotal) {
+                inlineTotal = total;
+                print("lvl {d} - total:{d} - {s} \n", .{ nestingLvl, inlineTotal, line[0..10] });
+            }
+        }
     }
     return total;
 }
@@ -58,13 +58,6 @@ fn part1(buf: []u8) u32 {
         total += std.math.pow(u32, 2, FindMatchCards(line)) / 2;
 
     return total;
-}
-
-fn getCardId(card: []const u8) u32 {
-    var it_section = std.mem.splitAny(u8, std.mem.trim(u8, card, "\n"), ":");
-    const cardName = it_section.next() orelse unreachable;
-    var it_cardName = std.mem.splitBackwards(u8, cardName, " ");
-    return std.fmt.parseInt(u32, it_cardName.next().?, 10) catch unreachable;
 }
 
 fn FindMatchCards(card: []const u8) u32 {
