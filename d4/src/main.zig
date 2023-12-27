@@ -3,6 +3,9 @@ const print = std.debug.print;
 
 const FileName = "input.txt";
 
+var dic: std.AutoArrayHashMap(usize, u32) = undefined;
+var inlineTotal: u32 = 0;
+
 pub fn main() !void {
     const file = try std.fs.cwd().openFile(FileName, .{});
     defer file.close();
@@ -14,38 +17,39 @@ pub fn main() !void {
     const buf = try file.readToEndAlloc(allocator, 1024 * 1024);
     defer allocator.free(buf);
 
+    dic = std.AutoArrayHashMap(usize, u32).init(allocator);
+    defer dic.deinit();
+
     // const total = part1(buf);
     const total = part2(buf);
     print("total is: {d}\n", .{total});
 }
 
 fn part2(buf: []u8) u32 {
+    var total: u32 = 0;
+    var index: usize = 0;
     var it_lines = std.mem.splitSequence(u8, buf, "\n");
-    var total = getTotalWinningCards(&it_lines, 0, true);
-    it_lines.reset(); // count existing cards
-    while (it_lines.next()) |_| total += 1;
+    while (it_lines.next()) |line| {
+        defer index += 1;
+        const c = FindMatchCards(line);
+        dic.put(index, c) catch print("{d}", .{c});
+        total += 1;
+    }
+    total += getTotalWinningCards(0, index, 0, true);
     return total;
 }
-var inlineTotal: u32 = 0;
 
-fn getTotalWinningCards(it: *std.mem.SplitIterator(u8, std.mem.DelimiterType.sequence), nestingLvl: u32, logging: bool) u32 {
+fn getTotalWinningCards(start: usize, end: usize, nestingLvl: u32, logging: bool) u32 {
     var total: u32 = 0;
-    while (it.next()) |line| {
-        if (logging) print("{s} {d}\n", .{ line, inlineTotal });
+    for (start..end) |i| {
+        if (logging) print("Processing Game {d}\n", .{i + 1});
 
-        const index = it.index;
-        defer it.index = index; // reset the iterator
-
-        var x = FindMatchCards(line);
+        const x: u32 = dic.get(i).?;
+        if (x > 0) {
+            total += getTotalWinningCards(i + 1, i + 1 + x, nestingLvl + 1, false);
+        }
 
         total += x;
-        while (x > 1) : (x -= 1) {
-            total += getTotalWinningCards(it, nestingLvl + 1, false);
-            if (total > inlineTotal) {
-                inlineTotal = total;
-                print("lvl {d} - total:{d} - {s} \n", .{ nestingLvl, inlineTotal, line[0..10] });
-            }
-        }
     }
     return total;
 }
@@ -81,6 +85,6 @@ fn FindMatchCards(card: []const u8) u32 {
         }
         it_myNumbers.reset();
     }
-    // print("{d} <- {s}\n", .{ cardMatches, card });
+    print("{d} <- {s}\n", .{ cardMatches, card });
     return cardMatches;
 }
