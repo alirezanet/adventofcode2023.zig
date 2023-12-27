@@ -15,21 +15,33 @@ pub fn main() !void {
     const buf = try file.readToEndAlloc(allocator, 512 * 512);
     defer allocator.free(buf);
 
-    var result: u32 = undefined;
-
     const maps = readMaps(&allocator, buf);
-    const seeds = try readSeeds(&allocator, buf);
+    const result: u32 = part2(buf, &maps);
 
-    for (seeds) |seed| {
-        const location: u32 = getLocation(maps, seed);
-        print("Seed {d} = location: {d}\n", .{ seed, location });
-        if (result > location)
-            result = location;
-    }
     print("result is: {d}\n", .{result});
 }
 
-fn getLocation(maps: std.ArrayList(Map), seed: u32) u32 {
+fn part2(buf: []u8, maps: *const std.ArrayList(Map)) u32 {
+    var it_lines = std.mem.splitSequence(u8, buf, "\n");
+    const seeds = it_lines.next().?;
+    var it_seeds = std.mem.splitAny(u8, seeds, ": ");
+
+    var result: u32 = undefined;
+    while (it_seeds.next()) |seedStr| {
+        const start: u32 = std.fmt.parseInt(u32, seedStr, 10) catch continue;
+        const end: u32 = std.fmt.parseInt(u32, it_seeds.next().?, 10) catch continue;
+        print("Processing {d}-{d}\n", .{ start, end });
+        for (start..start + end) |x| {
+            const seed: u32 = @intCast(x);
+            const location: u32 = getLocation(maps, seed);
+            if (result > location) result = location;
+        }
+    }
+
+    return result;
+}
+
+fn getLocation(maps: *const std.ArrayList(Map), seed: u32) u32 {
     var x = seed;
     var lastProcessedId: usize = undefined;
     for (0.., maps.items) |i, map| {
@@ -45,6 +57,22 @@ fn getLocation(maps: std.ArrayList(Map), seed: u32) u32 {
         }
     }
     return x;
+}
+
+fn readSeedsPart2(allocator: *std.mem.Allocator, buf: []u8) ![]u32 {
+    var it_lines = std.mem.splitSequence(u8, buf, "\n");
+
+    const seeds = it_lines.next().?;
+    var it_seeds = std.mem.splitAny(u8, seeds, ": ");
+    var seedArray = std.ArrayList(u32).init(allocator.*);
+
+    while (it_seeds.next()) |seedStr| {
+        const start: u32 = std.fmt.parseInt(u32, seedStr, 10) catch continue;
+        const end: u32 = std.fmt.parseInt(u32, it_seeds.next().?, 10) catch continue;
+        for (start..start + end) |x| try seedArray.append(@intCast(x));
+    }
+
+    return seedArray.items;
 }
 
 fn readSeeds(allocator: *std.mem.Allocator, buf: []u8) ![]u32 {
