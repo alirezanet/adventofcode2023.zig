@@ -1,10 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const Map = struct { id: usize, destination: u32, range: Range };
-const ThreadData = struct { maps: *const std.ArrayList(Map), range: Range, result: *u32 };
-const Range = struct { from: u32, to: u32 };
-
 const FileName = "input.txt";
 
 pub fn main() !void {
@@ -18,13 +14,14 @@ pub fn main() !void {
     const buf = try file.readToEndAlloc(allocator, 512 * 512);
     defer allocator.free(buf);
 
-    const maps = readMaps(&allocator, buf);
+    const maps = readMaps(allocator, buf);
+
     const result: u32 = part2(buf, maps.items);
 
     print("\nthe lowest location is: {d}\n", .{result});
 }
 
-fn part2(buf: []u8, maps: []u8) u32 {
+fn part2(buf: []u8, maps: []Map) u32 {
     var it_lines = std.mem.splitSequence(u8, buf, "\n");
     const seeds = it_lines.next().?;
     var it_seeds = std.mem.splitAny(u8, seeds, ": ");
@@ -83,11 +80,11 @@ pub fn GetRange(start: u32, lenght: u32) Range {
     return .{ .from = start, .to = start +% lenght };
 }
 
-fn readMaps(allocator: *std.mem.Allocator, buf: []u8) std.ArrayList(Map) {
+fn readMaps(allocator: std.mem.Allocator, buf: []u8) std.ArrayList(Map) {
     var it_lines = std.mem.splitSequence(u8, buf, "\n\n");
     _ = it_lines.next(); // ignore seeds
 
-    var list = std.ArrayList(Map).init(allocator.*);
+    var list = std.ArrayList(Map).init(allocator);
 
     var sectionId: usize = 0;
     while (it_lines.next()) |section| {
@@ -107,3 +104,14 @@ fn readMaps(allocator: *std.mem.Allocator, buf: []u8) std.ArrayList(Map) {
     }
     return list;
 }
+
+const Map = struct {
+    id: usize,
+    destination: u32,
+    range: Range,
+};
+
+const Range = struct {
+    from: u32,
+    to: u32,
+};
