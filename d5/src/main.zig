@@ -19,12 +19,12 @@ pub fn main() !void {
     defer allocator.free(buf);
 
     const maps = readMaps(&allocator, buf);
-    const result: u32 = part2(buf, &maps);
+    const result: u32 = part2(buf, maps.items);
 
     print("\nthe lowest location is: {d}\n", .{result});
 }
 
-fn part2(buf: []u8, maps: *const std.ArrayList(Map)) u32 {
+fn part2(buf: []u8, maps: []u8) u32 {
     var it_lines = std.mem.splitSequence(u8, buf, "\n");
     const seeds = it_lines.next().?;
     var it_seeds = std.mem.splitAny(u8, seeds, ": ");
@@ -35,7 +35,7 @@ fn part2(buf: []u8, maps: *const std.ArrayList(Map)) u32 {
         const end: u32 = std.fmt.parseInt(u32, it_seeds.next().?, 10) catch continue;
         print("\n-- Seed range: {d}-{d} {s}\n", .{ start, end, "-" ** 40 });
 
-        const location: u32 = GetRangeLocation(GetRange(start, end), maps.items);
+        const location: u32 = GetRangeLocation(GetRange(start, end), maps);
         if (result > location) result = location;
     }
 
