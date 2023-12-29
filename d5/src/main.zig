@@ -1,8 +1,11 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const Map = struct { id: usize, destination: u32, source: u32, lenght: u32 };
-const FileName = "test.txt";
+const Map = struct { id: usize, destination: u32, range: Range };
+const ThreadData = struct { maps: *const std.ArrayList(Map), range: Range, result: *u32 };
+const Range = struct { from: u32, to: u32 };
+
+const FileName = "input.txt";
 
 pub fn main() !void {
     const file = try std.fs.cwd().openFile(FileName, .{});
@@ -18,7 +21,7 @@ pub fn main() !void {
     const maps = readMaps(&allocator, buf);
     const result: u32 = part2(buf, &maps);
 
-    print("result is: {d}\n", .{result});
+    print("\nthe lowest location is: {d}\n", .{result});
 }
 
 fn part2(buf: []u8, maps: *const std.ArrayList(Map)) u32 {
@@ -27,62 +30,57 @@ fn part2(buf: []u8, maps: *const std.ArrayList(Map)) u32 {
     var it_seeds = std.mem.splitAny(u8, seeds, ": ");
     var result: u32 = undefined;
 
-    const maxThread = 20;
-    var threads: [maxThread]std.Thread = undefined;
-    var results: [maxThread]u32 = undefined;
-
-    var counter: usize = 0;
     while (it_seeds.next()) |seedStr| {
         const start: u32 = std.fmt.parseInt(u32, seedStr, 10) catch continue;
         const end: u32 = std.fmt.parseInt(u32, it_seeds.next().?, 10) catch continue;
-        defer counter += 1;
+        print("\n-- Seed range: {d}-{d} {s}\n", .{ start, end, "-" ** 40 });
 
-        const threadData = ThreadData{
-            .maps = maps,
-            .from = start,
-            .to = start + end,
-            .result = &results[counter],
-        };
-
-        threads[counter] = std.Thread.spawn(.{}, threadFunc, .{threadData}) catch unreachable;
-        print("Processing {d}-{d}\n", .{ start, end });
-    }
-
-    for (threads[0..counter]) |thread| thread.join();
-
-    for (results[0..counter]) |threadResult| {
-        if (result > threadResult) result = threadResult;
+        const location: u32 = GetRangeLocation(GetRange(start, end), maps.items);
+        if (result > location) result = location;
     }
 
     return result;
 }
 
-const ThreadData = struct { maps: *const std.ArrayList(Map), from: u32, to: u32, result: *u32 };
-
-fn threadFunc(data: ThreadData) void {
+fn GetRangeLocation(seedRange: Range, mappings: []Map) u32 {
     var result: u32 = undefined;
-    for (data.from..data.to) |x| {
-        const seed: u32 = @intCast(x);
-        const location: u32 = getLocation(data.maps, seed);
-        if (result > location) result = location;
+    var range = seedRange;
+
+    print("\nprocessing {any}\n", .{range});
+    var lastProcessedId: usize = undefined;
+
+    for (0.., mappings) |i, map| {
+        if (lastProcessedId == map.id) continue;
+
+        const os = @max(range.from, map.range.from);
+        const oe = @min(range.to, map.range.to);
+        if (os < oe) // check if range is empty
+        {
+            if (os > range.from) {
+                const x = GetRangeLocation(.{ .from = range.from, .to = os }, mappings[i..]);
+                if (result > x) result = x;
+            }
+
+            if (range.to > oe) {
+                const x = GetRangeLocation(.{ .from = oe, .to = range.to }, mappings[i..]);
+                if (result > x) result = x;
+            }
+
+            const newRange = .{ .from = @abs(os - map.range.from) +% map.destination, .to = @abs(oe - map.range.from) +% map.destination };
+            print("\t-> {d}-{d} to {d}-{d}\n", .{ range.from, range.to, newRange.from, newRange.to });
+            range = newRange;
+            lastProcessedId = map.id;
+        }
     }
-    data.result.* = result;
-    // @atomicStore(u32, data.result, result, std.builtin.AtomicOrder.SeqCst);
+
+    // this will find the smallest location
+    if (result > range.from) result = range.from;
+
+    return result;
 }
 
-fn readSeeds(allocator: *std.mem.Allocator, buf: []u8) ![]u32 {
-    var it_lines = std.mem.splitSequence(u8, buf, "\n");
-
-    const seeds = it_lines.next().?;
-    var it_seeds = std.mem.splitAny(u8, seeds, ": ");
-    var seedArray = std.ArrayList(u32).init(allocator.*);
-
-    while (it_seeds.next()) |seedStr| {
-        const seed: u32 = std.fmt.parseInt(u32, seedStr, 10) catch continue;
-        try seedArray.append(seed);
-    }
-
-    return seedArray.items;
+pub fn GetRange(start: u32, lenght: u32) Range {
+    return .{ .from = start, .to = start +% lenght };
 }
 
 fn readMaps(allocator: *std.mem.Allocator, buf: []u8) std.ArrayList(Map) {
@@ -103,27 +101,9 @@ fn readMaps(allocator: *std.mem.Allocator, buf: []u8) std.ArrayList(Map) {
             const source = std.fmt.parseInt(u32, it_map.next().?, 10) catch unreachable;
             const lenght = std.fmt.parseInt(u32, it_map.next().?, 10) catch unreachable;
 
-            const map = Map{ .id = sectionId, .destination = destination, .source = source, .lenght = lenght };
+            const map = Map{ .id = sectionId, .destination = destination, .range = GetRange(source, lenght) };
             list.append(map) catch unreachable;
         }
     }
-
     return list;
-}
-fn getLocation(maps: *const std.ArrayList(Map), seed: u32) u32 {
-    var x = seed;
-    var lastProcessedId: usize = undefined;
-    for (0.., maps.items) |i, map| {
-        if (lastProcessedId == map.id) continue;
-
-        const next: ?Map = if (i < maps.items.len - 1) maps.items[i + 1] else null;
-        if (x >= map.source and x < map.source +% map.lenght) {
-            x = @abs(x - map.source) + map.destination;
-            lastProcessedId = map.id; // flag id as proccesed
-            // print("{d} {d} \n", .{ map.id, x });
-        } else if (next == null or next.?.id != map.id) {
-            // print("{d} {d} \n", .{ map.id, x });
-        }
-    }
-    return x;
 }
