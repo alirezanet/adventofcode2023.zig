@@ -8,10 +8,10 @@ pub fn main() !void {
     defer file.close();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){}; //.init(std.heap.page_allocator);
-    // defer gpa.deinit();
+    defer std.debug.assert(gpa.deinit() == .ok);
     var allocator = gpa.allocator();
 
-    const buf = try file.readToEndAlloc(allocator, 512 * 512);
+    const buf = try file.readToEndAlloc(allocator, 256 * 256);
     defer allocator.free(buf);
 
     // parse
@@ -37,9 +37,10 @@ pub fn main() !void {
     var searchPoint: u64 = undefined;
     var endPoint: u64 = undefined;
     var startPoint: u64 = undefined;
+    var totalSearch: usize = 0;
 
-    // find search point
-    while (true) {
+    // find search point .....[....*....]..
+    while (true) : (totalSearch += 1) {
         if (getTravelTime(time, x) > distance) {
             searchPoint = x;
             break;
@@ -53,9 +54,9 @@ pub fn main() !void {
         search_direction = !search_direction;
     }
 
-    // find endpoint
+    // find endpoint .....[........]*..
     x = @divTrunc(searchPoint + time, 2);
-    while (true) {
+    while (true) : (totalSearch += 1) {
         if (getTravelTime(time, x) > distance) {
             endPoint = x;
             if (getTravelTime(time, x + 1) <= distance) {
@@ -68,9 +69,9 @@ pub fn main() !void {
         x = @divTrunc(x + @max(searchPoint, endPoint), 2);
     }
 
-    // find start point
+    // find start point .....*[........]..
     x = @divTrunc(time - searchPoint, 2);
-    while (true) {
+    while (true) : (totalSearch += 1) {
         if (getTravelTime(time, x) > distance) {
             startPoint = x;
             if (getTravelTime(time, x - 1) <= distance) {
@@ -85,7 +86,7 @@ pub fn main() !void {
 
     waysToWin = endPoint - startPoint + 1;
 
-    print("\n Total ways to win: {d}\n", .{waysToWin});
+    print("\n Total ways to win: {d} in {} of {} \n", .{ waysToWin, totalSearch, time });
 }
 
 fn getTravelTime(maxTime: u64, buttonTime: u64) u64 {
