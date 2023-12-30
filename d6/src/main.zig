@@ -1,7 +1,7 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const FileName = "test.txt";
+const FileName = "input.txt";
 
 pub fn main() !void {
     const file = try std.fs.cwd().openFile(FileName, .{});
@@ -16,28 +16,78 @@ pub fn main() !void {
 
     // parse
     var line_it = std.mem.splitAny(u8, buf, "\n\r");
-    var time_it = std.mem.tokenizeAny(u8, line_it.next().?, " :TimeDistance");
-    var distance_it = std.mem.tokenizeAny(u8, line_it.next().?, " :TimeDistance");
 
-    var totalWaysToWin: u32 = 1;
-    while (time_it.next()) |timeString| {
-        const time = try std.fmt.parseInt(usize, timeString, 10);
-        const distance = try std.fmt.parseInt(usize, distance_it.next().?, 10);
-        print("time {d:<4} | distance {d:<4}\n", .{ time, distance });
+    var time_it = std.mem.tokenizeAny(u8, line_it.next().?, ":TimeDistance\n\t\r");
+    var distance_it = std.mem.tokenizeAny(u8, line_it.next().?, ":TimeDistance\n\t\r");
 
-        var waysToWin: u32 = 0;
+    const timeString = try std.mem.replaceOwned(u8, allocator, time_it.next().?, " ", "");
+    const time = try std.fmt.parseInt(u64, timeString, 10);
+    allocator.free(timeString);
 
-        for (1..distance) |i| {
-            if (time < i) break;
+    const distanceString = try std.mem.replaceOwned(u8, allocator, distance_it.next().?, " ", "");
+    const distance = try std.fmt.parseInt(u64, distanceString, 10);
+    allocator.free(distanceString);
 
-            const travel: usize = (time - i) * i;
-            if (travel > distance) {
-                print("Hold for {}ms to travel {}mm\n", .{ i, travel });
-                waysToWin += 1;
-            }
+    print("time {d:<4} | distance {d:<4}\n", .{ time, distance });
+
+    var waysToWin: u64 = 0;
+
+    var x: u64 = @divTrunc(time, 2);
+    var search_direction: bool = true;
+    var searchPoint: u64 = undefined;
+    var endPoint: u64 = undefined;
+    var startPoint: u64 = undefined;
+
+    // find search point
+    while (true) {
+        if (getTravelTime(time, x) > distance) {
+            searchPoint = x;
+            break;
         }
-        totalWaysToWin *= waysToWin;
+
+        if (search_direction) {
+            x = @divTrunc(time + x, 2);
+        } else {
+            x = @divTrunc(time - x, 2);
+        }
+        search_direction = !search_direction;
     }
 
-    print("\n Total ways to win: {d}\n", .{totalWaysToWin});
+    // find endpoint
+    x = @divTrunc(searchPoint + time, 2);
+    while (true) {
+        if (getTravelTime(time, x) > distance) {
+            endPoint = x;
+            if (getTravelTime(time, x + 1) <= distance) {
+                break;
+            }
+            x = @divTrunc(endPoint + time, 2);
+            continue;
+        }
+
+        x = @divTrunc(x + @max(searchPoint, endPoint), 2);
+    }
+
+    // find start point
+    x = @divTrunc(time - searchPoint, 2);
+    while (true) {
+        if (getTravelTime(time, x) > distance) {
+            startPoint = x;
+            if (getTravelTime(time, x - 1) <= distance) {
+                break;
+            }
+            x = @divTrunc(startPoint, 2);
+            continue;
+        }
+
+        x = @divTrunc(x + @min(searchPoint, startPoint), 2);
+    }
+
+    waysToWin = endPoint - startPoint + 1;
+
+    print("\n Total ways to win: {d}\n", .{waysToWin});
+}
+
+fn getTravelTime(maxTime: u64, buttonTime: u64) u64 {
+    return (maxTime -% buttonTime) *% buttonTime;
 }
