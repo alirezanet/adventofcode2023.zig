@@ -1,0 +1,7 @@
+You can just use the quadratic formula where a=1, b=-1*times, and c=distance. You should get an upper and lower bound where the parabola crosses the x-axis. If you take the ceil() of both bounds and subtract the smaller from the larger, you should have the answer.
+
+  double min = (t - Math.Sqrt(t*t - (4*s)))/2;
+        double max = (t + Math.Sqrt(t*t - (4*s)))/2;
+        double r1 = (int)(min+1); 
+        double r2 = Math.Ceiling(max);
+        return (r2-r1);
