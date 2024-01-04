@@ -109,7 +109,6 @@ const Hand = struct {
                 cardHashMap.put(card, 1) catch unreachable;
             }
         }
-        // if (max > 1 and bestCard == 0 and hasJ) bestCard = 'A';
 
         // replace bestCard with J
         if (hasJ and bestCard > 0) {
