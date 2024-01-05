@@ -1,5 +1,7 @@
 const std = @import("std");
-const stdOut = std.io.getStdOut().writer();
+const stdOut_file = std.io.getStdOut().writer();
+var bw = std.io.bufferedWriter(stdOut_file);
+const stdOut = bw.writer();
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var allocator = gpa.allocator();
@@ -29,6 +31,7 @@ pub fn main() !void {
     }
 
     print("total winnings: {d}\n", .{total});
+    try bw.flush();
 }
 
 fn comparer(_: void, a: Record, b: Record) bool {
