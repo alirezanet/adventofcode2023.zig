@@ -21,19 +21,26 @@ pub fn main() !void {
             try numbers.append(n);
         }
         print("{any} \n", .{numbers.items});
-        const x = findNext(numbers.items);
+
+        // const x = part1(numbers.items);
+        const x = part2(numbers.items);
         total += x;
-        // print("found {d}\n\n", .{x});
     }
 
     print("result: {d}\n", .{total});
 }
 
+fn part1(lst: []i32) i32 {
+    return findNext(lst);
+}
+
+fn part2(lst: []i32) i32 {
+    std.mem.reverse(i32, lst);
+    return findNext(lst);
+}
+
 fn findNext(lst: []i32) i32 {
-    if (std.mem.allEqual(i32, lst, lst[0])) {
-        // defer print("constant number: {any} {d}\n", .{ lst, lst[0] });
-        return lst[0];
-    }
+    if (std.mem.allEqual(i32, lst, lst[0])) return lst[0];
 
     var subList = std.ArrayList(i32).initCapacity(allocator, lst.len - 1) catch unreachable;
     defer subList.deinit();
@@ -42,14 +49,6 @@ fn findNext(lst: []i32) i32 {
     while (i < lst.len - 1) : (i += 1)
         subList.appendAssumeCapacity(lst[i + 1] - lst[i]);
 
-    // constant diff
-    // i = 0;
-    // if (std.mem.allEqual(i32, subList.items, subList.items[0])) {
-    //     print("constant diff: {any} {d}\n", .{ lst, (lst[1] - lst[0]) * lst.len });
-    //     return @as(i32, @intCast((lst[1] - lst[0]) * lst.len)) + findNext(subList.items);
-    // }
-
-    // defer print("growth: {any} {}\n", .{ lst, findNext(subList.items) + lst[lst.len - 1] });
     return findNext(subList.items) + lst[lst.len - 1];
 }
 
