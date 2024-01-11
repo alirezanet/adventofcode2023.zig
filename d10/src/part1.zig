@@ -31,8 +31,8 @@ pub fn main() !void {
 
     // move to the end of loop
     var i: usize = start;
-    var jumped = true; // TODO: find initial value
-    var dir = false;
+    var jumped = if (data.items[i] != '-') true else false;
+    var dir = true;
     var step: usize = 0;
     var firstTurn = true;
     while (true) {
@@ -42,7 +42,6 @@ pub fn main() !void {
             firstTurn = false;
         }
 
-        // std.debug.print("{c} {} {d}\n", .{ c, jumped, i });
         const next: usize = switch (c) {
             '-' => if (dir) i + 1 else i - 1,
             '|' => if (dir) i + r else i - r,
@@ -63,7 +62,8 @@ pub fn main() !void {
         step += 1;
     }
 
-    print("farthest: {} \n", .{step / 2});
+    // part 1
+    print("farthest: {}\n", .{step / 2});
 }
 
 fn findS(data: []u8, startIdx: usize, r: usize) u8 {
