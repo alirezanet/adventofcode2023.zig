@@ -15,21 +15,17 @@ pub fn main() !void {
     // convert string to array
     var it_lines = std.mem.tokenizeAny(u8, content, "\n\r");
     var r: usize = 0;
+    var start: usize = 0;
+    var idx: usize = 0;
     while (it_lines.next()) |line| {
         if (r == 0) r = line.len;
-        for (line) |c| try data.append(c);
-    }
-
-    // find the starting point
-    var start: usize = 0;
-    for (0.., data.items) |i, c| {
-        if (c == 'S') {
-            start = i;
-            break;
+        for (line) |c| {
+            if (c == 'S') start = idx;
+            try data.append(c);
+            idx += 1;
         }
     }
 
-    // move to the end of loop
     var i: usize = start;
     var jumped = if (data.items[i] != '-') true else false;
     var dir = true;
