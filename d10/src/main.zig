@@ -4,7 +4,7 @@ const util = @import("util.zig");
 const allocator = util.gpa.allocator();
 const print = util.print;
 
-const content = @embedFile("test2.txt");
+const content = @embedFile("test3.txt");
 
 pub fn main() !void {
     defer util.cleanUp();
@@ -74,58 +74,73 @@ pub fn main() !void {
         if (!area.contains(i)) data.items[i] = '.' else continue;
         const cRow: usize = getRow(i, r);
 
-        var j = i + 1;
-        var pairCross: usize = 0;
         var cross: usize = 0;
+        var balance: ?isize = null;
+
+        // ->
+        var j = i + 1;
         while (j < data.items.len and getRow(j, r) == cRow) : (j += 1) {
-            // var up: usize = 0;
-            // var down: usize = 0;
-            switch (data.items[j]) {
+            const c = data.items[j];
+            switch (c) {
                 '|' => cross += 1,
-                '.', '-' => continue,
+                'L', 'J' => balance = (balance orelse 0) - 1,
+                '7', 'F' => balance = (balance orelse 0) + 1,
                 else => {},
             }
         }
-        if (cross == 0) continue else {
-            pairCross = cross;
+        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
+        if (cross == 0 or cross % 2 == 0) continue else {
             cross = 0;
+            balance = null;
         }
 
-        j = if (i == 0) i else i - 1;
-        while (j > 0 and getRow(j, r) == cRow) : (j -= 1) {
-            switch (data.items[j]) {
+        // <-
+        j = if (i == 0) 0 else i - 1;
+        while (j < 0 and getRow(j, r) == cRow) : (j -= 1) {
+            const c = data.items[j];
+            switch (c) {
                 '|' => cross += 1,
-                '.', '-' => continue,
+                'L', 'J' => balance = (balance orelse 0) - 1,
+                '7', 'F' => balance = (balance orelse 0) + 1,
                 else => {},
             }
         }
-
-        if (cross == 0 or (pairCross + cross) % 2 != 0) continue else {
-            pairCross = 0;
+        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
+        if (cross == 0 or cross % 2 == 0) continue else {
             cross = 0;
+            balance = null;
         }
 
+        // V
         j = i + r;
-        while (j < data.items.len) : (j += r) {
-            switch (data.items[j]) {
+        while (j < 0 and getRow(j, r) == cRow) : (j += r) {
+            const c = data.items[j];
+            switch (c) {
                 '-' => cross += 1,
+                'L', 'J' => balance = (balance orelse 0) - 1,
+                '7', 'F' => balance = (balance orelse 0) + 1,
                 else => {},
             }
         }
-        if (cross == 0) continue else {
-            pairCross = cross;
+        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
+        if (cross == 0 or cross % 2 == 0) continue else {
             cross = 0;
+            balance = null;
         }
 
+        // ^
         j = if (i > r) i - r else r;
         while (j > r) : (j -= r) {
             switch (data.items[j]) {
                 '-' => cross += 1,
+                'L', 'J' => balance = (balance orelse 0) - 1,
+                '7', 'F' => balance = (balance orelse 0) + 1,
                 else => {},
             }
         }
+        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
+        if (cross == 0 or cross % 2 == 0) continue;
 
-        if (cross == 0 or (pairCross + cross) % 2 != 0) continue;
         try tiles.put(i, {});
     }
 
@@ -135,7 +150,8 @@ pub fn main() !void {
         if (tiles.contains(i))
             print("{c}", .{'I'})
         else if (area.contains(i))
-            print("{c}", .{area.get(i).?})
+            print("{c}", .{'.'})
+            // print("{c}", .{area.get(i).?})
         else
             print("{c}", .{c});
     }
