@@ -4,7 +4,7 @@ const util = @import("util.zig");
 const allocator = util.gpa.allocator();
 const print = util.print;
 
-const content = @embedFile("test3.txt");
+const content = @embedFile("input.txt");
 
 pub fn main() !void {
     defer util.cleanUp();
@@ -12,7 +12,7 @@ pub fn main() !void {
     var data = std.ArrayList(u8).init(allocator);
     defer data.deinit();
 
-    // convert string to array
+    // parse
     var it_lines = std.mem.tokenizeAny(u8, content, "\n\r");
     var r: usize = 0;
     var start: usize = 0;
@@ -26,9 +26,10 @@ pub fn main() !void {
         }
     }
 
-    // find path
     var area = std.AutoArrayHashMap(usize, u8).init(allocator);
     defer area.deinit();
+
+    // part 1
     {
         var i: usize = start;
         var jumped = if (data.items[i] != '-') true else false;
@@ -64,104 +65,59 @@ pub fn main() !void {
             i = next;
             step += 1;
         }
+
+        print("part 1 - farthest: {}\n", .{step / 2});
     }
 
-    var tiles = std.AutoArrayHashMap(usize, void).init(allocator);
-    defer tiles.deinit();
-
-    // find possible tiles
+    // part 2
+    var tiles: usize = 0;
     for (0..data.items.len) |i| {
-        if (!area.contains(i)) data.items[i] = '.' else continue;
-        const cRow: usize = getRow(i, r);
+        var c: u8 = '.';
+        defer print("{c}", .{c});
+        defer if (i % r == 0 or i == r) print("\n", .{});
+
+        if (area.contains(i)) {
+            // c = data.items[i]; //// this will print the maze
+            continue;
+        }
 
         var cross: usize = 0;
-        var balance: ?isize = null;
+        var dir: ?bool = null;
 
-        // ->
-        var j = i + 1;
-        while (j < data.items.len and getRow(j, r) == cRow) : (j += 1) {
-            const c = data.items[j];
-            switch (c) {
-                '|' => cross += 1,
-                'L', 'J' => balance = (balance orelse 0) - 1,
-                '7', 'F' => balance = (balance orelse 0) + 1,
-                else => {},
-            }
-        }
-        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
-        if (cross == 0 or cross % 2 == 0) continue else {
-            cross = 0;
-            balance = null;
-        }
-
-        // <-
-        j = if (i == 0) 0 else i - 1;
-        while (j < 0 and getRow(j, r) == cRow) : (j -= 1) {
-            const c = data.items[j];
-            switch (c) {
-                '|' => cross += 1,
-                'L', 'J' => balance = (balance orelse 0) - 1,
-                '7', 'F' => balance = (balance orelse 0) + 1,
-                else => {},
-            }
-        }
-        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
-        if (cross == 0 or cross % 2 == 0) continue else {
-            cross = 0;
-            balance = null;
-        }
-
-        // V
-        j = i + r;
-        while (j < 0 and getRow(j, r) == cRow) : (j += r) {
-            const c = data.items[j];
-            switch (c) {
-                '-' => cross += 1,
-                'L', 'J' => balance = (balance orelse 0) - 1,
-                '7', 'F' => balance = (balance orelse 0) + 1,
-                else => {},
-            }
-        }
-        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
-        if (cross == 0 or cross % 2 == 0) continue else {
-            cross = 0;
-            balance = null;
-        }
-
-        // ^
-        j = if (i > r) i - r else r;
-        while (j > r) : (j -= r) {
+        var j = i + r;
+        while (j < data.items.len) : (j += r) {
+            if (!area.contains(j)) continue;
             switch (data.items[j]) {
                 '-' => cross += 1,
-                'L', 'J' => balance = (balance orelse 0) - 1,
-                '7', 'F' => balance = (balance orelse 0) + 1,
+                '7', 'J' => {
+                    if (dir == null)
+                        dir = true
+                    else if (dir.?)
+                        dir = null
+                    else {
+                        cross += 1;
+                        dir = null;
+                    }
+                },
+                'L', 'F' => {
+                    if (dir == null)
+                        dir = false
+                    else if (!dir.?)
+                        dir = null
+                    else {
+                        cross += 1;
+                        dir = null;
+                    }
+                },
                 else => {},
             }
         }
-        if (balance != null and @rem(balance.?, 2) == 0) cross += 1;
         if (cross == 0 or cross % 2 == 0) continue;
-
-        try tiles.put(i, {});
+        tiles += 1;
+        c = 'I';
     }
 
-    // print
-    for (0.., data.items) |i, c| {
-        if (i % r == 0 or i == r) print("\n", .{});
-        if (tiles.contains(i))
-            print("{c}", .{'I'})
-        else if (area.contains(i))
-            print("{c}", .{'.'})
-            // print("{c}", .{area.get(i).?})
-        else
-            print("{c}", .{c});
-    }
-
-    print("\ntotal tiles: {}\n", .{tiles.keys().len});
-}
-
-fn getRow(index: usize, rowLength: usize) usize {
-    if (index == rowLength) return 0;
-    return index / rowLength;
+    print("\npart 2 - total tiles enclosed by the loop: {}\n", .{tiles});
 }
 
 fn findS(data: []u8, startIdx: usize, r: usize) u8 {
